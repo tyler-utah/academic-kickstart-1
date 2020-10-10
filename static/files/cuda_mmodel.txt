@@ -1,0 +1,821 @@
+-----------------------------------------------------------------------------------------
+--instructions for implementing custom tests: Search for HOWTO
+-----------------------------------------------------------------------------------------
+
+CONST
+	TMAX       : 3;	    -- Max thread ID	
+	BMAX       : 0;     -- Max block ID
+	MAXIQIND   : 3;     -- Max index into instruction queues 
+	DMAX       : 3;     -- Max data value
+	MAXADDR    : 2;	    -- Max address into global and shared and registers
+	MAXPC	   : 2;     -- Max instrn count
+
+TYPE
+	threadT   :  0..TMAX;	   -- type of threadID
+	blockT    :  0..BMAX;	   -- type of blockID
+	addrT     :  0..MAXADDR;   -- type of addr
+	dT        :  0..DMAX;	   -- type data
+	iqIndT    :  0..MAXIQIND;  -- type of index into instruction queue
+	pcT       :  0..MAXPC;     -- type of index into intrn counter
+
+
+	gdT : record            -- type of value in global data
+	            Data           : dT;
+		    Shared         : boolean;
+		    GlobalShared   : boolean;
+                    Borrowed       : boolean;
+              end;
+
+	sdT : record            -- type of value in shared data
+	            Data           : dT;
+		    Shared         : boolean;
+                    Borrowed       : boolean;
+              end;
+
+        opcodeT : enum {ld, st, tfb, tf, noop}; -- different types of instrns
+
+	instrT  : record                       -- intstrns: type of instrn and args
+			Op     : opcodeT; 
+		  	Arg1   : addrT;
+		  	Arg2   : addrT;
+                        Global : boolean;  -- Are we going to global or shared memory
+  		  end;
+
+--Supported instructions
+--------------------------------------------------------------------------------------------
+        -- ld      (Arg1, Arg2)   - Issue a load of address ARG2 into register ARG1
+	-- st      (Arg1, Arg2)   - Issue a store value in register ARG2 into address ARG1
+	-- tfb     (Args ignored) - Execute a thread fence block
+	-- tf      (Args ignored) - Execute a thread fence (stronger)
+	-- noop    (Args ignored) - Simply increment PC
+--------------------------------------------------------------------------------------------
+
+--Queue data types and Queue types
+	qdT : record                         -- type of data that goes into the store queue
+			qType    : opcodeT;  -- what type of instruction is it?
+			Data     : dT;       -- data value (ignored if IsFence)
+			RegUsed  : addrT;    -- keep track of which register it uses.
+	         end;
+
+	qT : record                                     -- The actual store queue
+			Arr   :  array [iqIndT] of qdT; -- storage for the data
+			Cnt   : -1..MAXIQIND;           -- how many items in queue?
+		 end;
+
+--Load Pool
+	lpdT : record                        -- type of data that goes into the load pool
+			Addr     : addrT;    -- address of where to load from
+			Reg      : addrT;    -- Register to load into
+			Global   : boolean;  -- loading from shared or global 
+	         end;
+
+	lpT : record                                        -- Actual Load Pool
+			Arr     : array [pcT] of lpdT;    -- Actual data
+			Cnt     : -1..MAXPC;                -- Count
+	         end;
+
+--Memory
+
+	lgmT : array [addrT] of gdT; --local global memory type
+	lsmT : array [addrT] of sdT; --local shared memory type
+
+        smT : array[blockT] of array[threadT] of lsmT;
+        gmT : array[blockT] of array[threadT] of lgmT;
+
+---------------------------------------------------------------------------------------------------------------------------
+
+VAR
+	PC   : array[blockT] of array[threadT] of pcT;                    --Program counter
+	REG  : array[blockT] of array[threadT] of array [addrT] of dT;    --Registers (as many registers as there are addresses
+        SM   : smT;                                                        --Shared memory (one per thread)
+        GM   : gmT;                                                        --Global memory (one per block)
+	PGM  : array[blockT] of array[threadT] of array [pcT] of instrT;  --The actual program
+	SQA  : array[blockT] of array[threadT] of array [addrT] of qT;   --The shared memory address queues
+	GQA  : array[blockT] of array[threadT] of array [addrT] of qT;    --The global memory address queues
+	LP   : array[blockT] of array[threadT] of lpT;                    --The Load Pool for each thread
+	doneissue : array[blockT] of array[threadT] of Boolean;	          --Flag for finishing the program
+
+-----------------------------------------------------------
+--Procedures and Functions
+-----------------------------------------------------------
+
+PROCEDURE initq(var queue: qT);
+-- initialize the store queues
+begin
+  for i:iqIndT do
+      Undefine queue.Arr[i]
+  end;
+  queue.Cnt  := -1;     -- empty queue
+end;
+
+PROCEDURE initlp(var queue: lpT);
+-- initialize the load pools
+begin
+  for i:pcT do
+      Undefine queue.Arr[i]
+  end;
+  queue.Cnt  := -1;     -- empty queue
+end;
+
+PROCEDURE incrpc(var curpc : pcT; maxpc : pcT; var doneissue : Boolean);
+-- increment the program counter and check to see if the program is over.
+begin
+ if (curpc < maxpc)
+    then curpc := curpc + 1
+ else
+    doneissue := true
+ endif;
+end;
+
+PROCEDURE enqueue(var queue: qT; inst : instrT; val : dT);
+--Take in an instruction to enqueue and possibly a value if a store
+begin
+ if 	queue.Cnt = MAXIQIND
+ then 	ERROR "Queue is full";
+ else 	queue.Cnt := queue.Cnt + 1;
+        queue.Arr[queue.Cnt].qType   := inst.Op;
+
+	--ld instruction
+	if   inst.Op = ld
+        then 
+          queue.Arr[queue.Cnt].RegUsed := inst.Arg1;
+	  undefine queue.Arr[queue.Cnt].Data
+
+	--st instruction
+	elsif   inst.Op = st
+        then 
+          queue.Arr[queue.Cnt].Data := val;
+	  undefine queue.Arr[queue.Cnt].RegUsed;
+
+	--fences and bars
+	else
+          undefine queue.Arr[queue.Cnt].Data;
+	  undefine queue.Arr[queue.Cnt].RegUsed;
+	endif;	
+ endif;
+end;
+
+PROCEDURE dequeue(var queue: qT);
+-- remove a value from the start of the queue
+begin
+ if queue.Cnt = -1
+ then ERROR "Queue is empty"
+ else -- Going to lose queue.Ar[0] now. see if it is data 
+      --
+      queue.Cnt := queue.Cnt - 1;
+      if queue.Cnt = -1
+      then Undefine queue.Arr[0]
+      else for i := 0 to queue.Cnt do
+	     queue.Arr[i] := queue.Arr[i+1]
+	   end;
+           Undefine queue.Arr[queue.Cnt+1]
+      endif
+ endif
+end;
+
+PROCEDURE mark_sharedM_shared(var SM_var : smT; b : blockT; t : threadT);
+--mark [b][t]'s shared memory as shared
+begin
+ For a  : addrT Do 
+   if !SM_var[b][t][a].Shared
+   then 
+     SM_var[b][t][a].Shared   := True;
+     SM_var[b][t][a].Borrowed := False;
+   endif;
+ endfor;
+end;
+
+PROCEDURE mark_globalM_local_shared(var GM_var : gmT; b : blockT; t : threadT);
+--mark [b][t]'s global memory as locally shared
+begin
+ For a  : addrT Do 
+   if !GM_var[b][t][a].Shared
+   then 
+     GM_var[b][t][a].Shared       := True;
+     GM_var[b][t][a].Borrowed     := False;
+     GM_var[b][t][a].GlobalShared := False;
+   endif;
+ endfor;
+end;
+
+PROCEDURE mark_globalM_all_shared(var GM_var : gmT; b : blockT; t : threadT);
+--mark [b][t]'s global memory as locally shared
+begin
+ For a  : addrT Do 
+   if !GM_var[b][t][a].Shared
+   then 
+     GM_var[b][t][a].Shared       := True;
+     GM_var[b][t][a].Borrowed     := False;
+     GM_var[b][t][a].GlobalShared := True;
+   endif;
+ endfor;
+end;
+
+PROCEDURE mergeShared(source : lsmT; var dest : lsmT);
+--Merge local shared memories source and dest
+begin
+ For a  : addrT Do 
+   if !source[a].Shared
+   then
+     dest[a].Data     := source[a].Data;
+     dest[a].Shared   := True;
+     dest[a].Borrowed := False;
+   endif;
+ endfor;
+end;
+
+PROCEDURE mergeGlobal(source : lgmT; var dest : lgmT; bsource : blockT; bdest : blockT);
+--Merge local shared memories source and dest
+begin
+ For a  : addrT Do
+   if (!source[a].Shared) | ((!source[a].GlobalShared) & (bdest != bsource))
+   then
+     dest[a].Data          := source[a].Data;
+     dest[a].Shared        := True;
+     dest[a].GlobalShared  := True;
+     dest[a].Borrowed      := False;
+   endif;
+ endfor;
+end;
+
+PROCEDURE addtoLoadPool(var lp: lpT; item : qdT; a : addrT; global : boolean);
+--adds a load to the load pool
+begin
+ if 	lp.Cnt = MAXIQIND
+ then 	ERROR "load pool is full";
+ else   lp.Cnt := lp.Cnt + 1;
+        lp.Arr[lp.Cnt].Global := global;
+        lp.Arr[lp.Cnt].Addr   := a;
+	lp.Arr[lp.Cnt].Reg    := item.RegUsed;
+ endif;
+end;
+
+PROCEDURE removeFromLoadPool(var lp: lpT; index : pcT);
+--removes index i from the load pool
+begin
+  if 	lp.Cnt < index
+  then 	ERROR "No item";
+  else  lp.Cnt := lp.Cnt - 1;
+        if lp.Cnt = -1
+        then Undefine lp.Arr[0]
+        else for i := index to lp.Cnt do
+	     lp.Arr[i] := lp.Arr[i+1]
+	   end;
+           Undefine lp.Arr[lp.Cnt+1]
+      endif
+  endif;
+end;
+
+FUNCTION is_emptyq(queue : qT) : Boolean;
+-- is the queue emtpy?
+begin
+  if (queue.Cnt < -1)
+  then ERROR "Illegal queue count value"
+  else RETURN (queue.Cnt = -1)
+  endif
+end;
+
+FUNCTION is_emptyp(pool : lpT) : Boolean;
+-- is the loadpool emtpy?
+begin
+  if (pool.Cnt < -1)
+  then ERROR "Illegal queue count value"
+  else RETURN (pool.Cnt = -1)
+  endif
+end;
+
+FUNCTION lp_not_blocking(pool : lpT; a : addrT; global : boolean) : Boolean;
+--is the load pool blocking on address a
+begin
+  for i:= 0 to pool.Cnt do
+    if pool.Arr[i].Addr = a & pool.Arr[i].Global = global then return false;
+    endif;
+  endfor;
+  return true;
+end;
+
+FUNCTION done(b: blockT; t: threadT) : boolean;
+-- is the thread completely done? (All instructions fired and drained)
+begin
+  return doneissue[b][t] & is_emptyp(LP[b][t]) &
+             Forall a : addrT Do 
+               is_emptyq(SQA[b][t][a])         & 
+               is_emptyq(GQA[b][t][a])
+	     endforall;
+
+end;
+
+-----------------------------------------------------------
+--StateState (init with a program)
+-----------------------------------------------------------
+
+-----------------------------------------------------------
+--HOWTO implement custom tests. The start state needs to be
+--initialized with the program you would like to test.
+--This requires knowing How many instructions per thread,
+--how many threads and how many blocks, how many memory locations
+-- etc. First change the following globals at the begining of the program
+--
+-- 	TMAX       : How many threads per block;	    
+--	BMAX       : How many blocks;     
+--	MAXIQIND   : How many instructions;
+--	DMAX       : The range of immediate values;     -- Max data value
+--	MAXADDR    : How many shared/global/registers to have;
+--	MAXPC	   : How many instructions -1;
+--
+--Next in the startstate, where it says Insert Custom program here
+--load up initial register values and program values. See the example
+--for details. Also note the documentation around : "Supported instructions"
+--for documentation on the supported instructions, arguments etc.
+--
+--Finally make assertions about the execution in the Invariant 
+--section at the end. See the example for details.
+-----------------------------------------------------------
+
+
+STARTSTATE
+        ----
+        --COMMON STARTSTATE
+        ----
+
+        for b:blockT do
+	 for t:threadT do
+	    PC[b][t]   := 0;     -- each start at begining of program
+            doneissue[b][t] := false; -- no process is finished
+	 end;
+        end;
+
+
+        for b:blockT do
+	 for t:threadT do
+	 initlp(LP[b][t]); -- initialize load pool to empty.
+	  for a:addrT do
+	   initq(SQA[b][t][a]); -- initialize each queue to empty;
+	   initq(GQA[b][t][a]); -- initialize each queue to empty;	
+	  endfor;
+         endfor;
+        endfor;
+
+        --initializing memory, values to 0, shared (not needing to share) and not borrowed.
+        for b:blockT do
+	 for t:threadT do
+	  for a:addrT do
+	   GM[b][t][a].Data         :=  0;
+	   GM[b][t][a].Shared       :=  True;
+	   GM[b][t][a].GlobalShared :=  True;
+	   GM[b][t][a].Borrowed     :=  False;
+	   SM[b][t][a].Data         :=  0;
+	   SM[b][t][a].Shared       :=  True;
+	   SM[b][t][a].Borrowed     :=  False;
+	  end;
+         end;
+        end;
+
+       --Insert Custom program here
+	--Testing for strict coherence, should fail...
+
+	--T0
+	REG[0][0][0] := 1; --newa
+
+        -- st(0,0)
+	PGM[0][0][0].Op   := st;
+	PGM[0][0][0].Arg1 := 0;
+	PGM[0][0][0].Arg2 := 0;
+	PGM[0][0][0].Global := true;
+
+	PGM[0][0][1].Op   := noop;
+	PGM[0][0][2].Op   := noop;
+
+	--T1
+	REG[0][1][0] := 2; --newa
+
+        -- st(0,0)
+	PGM[0][1][0].Op   := st;
+	PGM[0][1][0].Arg1 := 0;
+	PGM[0][1][0].Arg2 := 0;
+	PGM[0][1][0].Global := true;
+
+	PGM[0][1][1].Op   := noop;
+	PGM[0][1][2].Op   := noop;
+
+	--T2
+	REG[0][2][0] := 0;
+	REG[0][2][1] := 0;
+
+	--ld(1,1)
+	PGM[0][2][0].Op     := ld;
+	PGM[0][2][0].Arg1   := 0;
+	PGM[0][2][0].Arg2   := 0;
+	PGM[0][2][0].Global := true;
+
+	--Change to tf(b) to fix
+	PGM[0][2][1].Op   := noop;
+
+	--ld(0,0)
+	PGM[0][2][2].Op   := ld;
+	PGM[0][2][2].Arg1 := 1;
+	PGM[0][2][2].Arg2 := 0;
+	PGM[0][2][2].Global := true;
+
+	--T3
+	REG[0][3][0] := 0;
+	REG[0][3][1] := 0;
+
+	--ld(1,1)
+	PGM[0][3][0].Op   := ld;
+	PGM[0][3][0].Arg1 := 0;
+	PGM[0][3][0].Arg2 := 0;
+	PGM[0][3][0].Global := true;
+
+        --Change to tf(b) to fix
+	PGM[0][3][1].Op   := noop;
+
+	--ld(0,0)
+	PGM[0][3][2].Op   := ld;
+	PGM[0][3][2].Arg1 := 1;
+	PGM[0][3][2].Arg2 := 0;
+	PGM[0][3][2].Global := true;
+
+
+ENDSTARTSTATE;
+
+-----------------------------------------------------------
+--Rules
+-----------------------------------------------------------
+--
+-----------------------------------------------------------
+--Sharing Memory non-deterministically
+-----------------------------------------------------------
+
+ruleset b : blockT do
+  ruleset t : threadT do
+    ruleset a : addrT do
+      Rule "share an completely unshared datum from global memory"
+      --
+      !GM[b][t][a].Shared & !GM[b][t][a].GlobalShared & !GM[b][t][a].Borrowed
+                                           ==>
+                                              for b2 : blockT Do
+                                               for t2 : threadT Do
+                                                if b != b2 | t != t2 then 
+                                                  GM[b2][t2][a].Data := GM[b][t][a].Data;
+                                                  GM[b2][t2][a].Shared := True;
+						  GM[b2][t2][a].GlobalShared := True;
+						  GM[b2][t2][a].Borrowed := False; 
+                                                endif;
+					       endfor;
+                                              endfor;
+					      GM[b][t][a].GlobalShared := True;
+					      GM[b][t][a].Shared := True;
+      Endrule;
+      Rule "share a partially shared datum from global memory"
+      --
+      GM[b][t][a].Shared & !GM[b][t][a].GlobalShared & !GM[b][t][a].Borrowed
+                                           ==>
+                                              for b2 : blockT Do
+                                               for t2 : threadT Do
+                                                if b != b2 then 
+                                                  GM[b2][t2][a].Data := GM[b][t][a].Data;
+                                                  GM[b2][t2][a].Shared := True;
+						  GM[b2][t2][a].GlobalShared := True;
+						  GM[b2][t2][a].Borrowed := False; 
+                                                endif;
+					       endfor;
+                                              endfor;
+					      GM[b][t][a].GlobalShared := True;
+					      GM[b][t][a].Shared := True;
+     Endrule;
+     Rule "share a datum from shared memory to others in the block"
+     --
+     !SM[b][t][a].Shared & !SM[b][t][a].Borrowed
+                                           ==>
+                                               for t2 : threadT Do
+                                                if t2 != t then 
+                                                  SM[b][t2][a].Data := SM[b][t][a].Data;
+                                                  SM[b][t2][a].Shared := True;
+						  SM[b][t2][a].Borrowed := False; 
+                                                endif;
+					       endfor;
+					      SM[b][t][a].Shared := True;
+     Endrule;
+   Endruleset;
+ Endruleset;
+Endruleset;
+
+-----------------------------------------------------------
+--Loading up queues with instructions
+-----------------------------------------------------------
+
+ruleset b : blockT do
+  ruleset t : threadT do
+    Alias ins : PGM[b][t][ PC[b][t] ] Do
+    
+      Rule "Fire a ld from global, store in global queue"
+      --
+         !doneissue[b][t] & 
+          ins.Op = ld     &
+          ins.Global = true  ==>
+                                enqueue(GQA[b][t][ins.Arg2], ins, 0);
+                                incrpc(PC[b][t], MAXPC, doneissue[b][t]);
+
+      Endrule;
+
+      Rule "Fire a ld from shared, store in shared queue"
+      --
+         !doneissue[b][t] & 
+          ins.Op = ld     &
+          ins.Global = false  ==>
+                                enqueue(SQA[b][t][ins.Arg2], ins, 0);
+                                incrpc(PC[b][t], MAXPC, doneissue[b][t]);
+
+      Endrule;
+
+      Rule "Fire a st from global, store in global queue"
+      --
+         !doneissue[b][t] & 
+          ins.Op = st     &
+          ins.Global = true  ==>
+                                enqueue(GQA[b][t][ins.Arg1], ins, REG[b][t][ins.Arg2]);
+                                incrpc(PC[b][t], MAXPC, doneissue[b][t]);
+
+      Endrule;
+
+      Rule "Fire a st from shared, store in shared queue"
+      --
+         !doneissue[b][t] & 
+          ins.Op = st     &
+          ins.Global = false  ==>
+                                enqueue(SQA[b][t][ins.Arg1], ins, REG[b][t][ins.Arg2]);
+                                incrpc(PC[b][t], MAXPC, doneissue[b][t]);
+
+      Endrule;
+
+      Rule "Fire a tf." --enqueu in all the queues
+      --
+        !doneissue[b][t] &
+         (ins.Op = tf)  ==> 
+                              For a : addrT Do 
+                                enqueue(SQA[b][t][a], ins, 0); 
+                                enqueue(GQA[b][t][a], ins, 0); 
+                              Endfor;  
+                              incrpc(PC[b][t], MAXPC, doneissue[b][t]);
+      Endrule;
+
+      Rule "Fire a tfb." --enqueu in all the queues
+      --
+        !doneissue[b][t] &
+         (ins.Op = tfb)  ==> 
+                              For a : addrT Do 
+                                enqueue(SQA[b][t][a], ins, 0); 
+                                enqueue(GQA[b][t][a], ins, 0); 
+                              Endfor;  
+                              incrpc(PC[b][t], MAXPC, doneissue[b][t]);
+      Endrule;
+
+      Rule "Fire a noop (simply incrpc)"
+      --
+        !doneissue[b][t] &
+         ins.Op = noop  ==> 
+                              incrpc(PC[b][t], MAXPC, doneissue[b][t]);
+
+     
+      EndRule;
+
+    Endalias;
+  endruleset;
+endruleset;
+
+-----------------------------------------------------------
+--Draining fences from queues
+-----------------------------------------------------------
+
+ruleset b : blockT do
+  ruleset t : threadT do
+
+    Rule "Drain all tfb fences when together."
+    --      
+      (Forall a : addrT Do 
+         !is_emptyq(SQA[b][t][a])             & 
+          SQA[b][t][a].Arr[0].qType = tfb     & 
+         !is_emptyq(GQA[b][t][a])             & 
+          GQA[b][t][a].Arr[0].qType = tfb 
+       Endforall)                             &
+       is_emptyp(LP[b][t])
+	                                   ==> 
+					          --atomically drain all
+                                                  For a : addrT Do 
+                                                    dequeue(SQA[b][t][a]);
+	                                            dequeue(GQA[b][t][a]);
+                                                  Endfor;
+						  --Share within block
+				                  For t2 : threadT Do
+                                                    if t != t2 then
+                                                       mergeShared(SM[b][t], SM[b][t2]);
+                                                       mergeGlobal(GM[b][t], GM[b][t2], b, b);
+						    endif;
+						  endfor;
+						  --Mark as merged
+						  mark_sharedM_shared(SM,b,t);
+						  mark_globalM_local_shared(GM,b,t);
+
+    Endrule;
+
+    Rule "Drain all tf fences when together."
+    --      
+      (Forall a : addrT Do 
+         !is_emptyq(SQA[b][t][a])            & 
+          SQA[b][t][a].Arr[0].qType = tf     & 
+         !is_emptyq(GQA[b][t][a])            & 
+          GQA[b][t][a].Arr[0].qType = tf 
+       Endforall)                            &
+       is_emptyp(LP[b][t])
+	                                   ==> 
+                                                  For a : addrT Do 
+                                                    dequeue(SQA[b][t][a]);
+	                                            dequeue(GQA[b][t][a]);
+                                                  Endfor;
+						   --Share globally
+				                  For t2 : threadT Do
+						    if t != t2 then
+                                                      mergeShared(SM[b][t], SM[b][t2]);
+						    endif;
+						    For b2 : blockT Do
+						      if t != t2 & b != b2 then
+                                                        mergeGlobal(GM[b][t], GM[b2][t2], b, b2);							
+						      endif;
+						    endfor;
+						  endfor;
+						  --Mark as merged
+						  mark_sharedM_shared(SM,b,t);
+						  mark_globalM_all_shared(GM,b,t);
+    Endrule;
+
+  Endruleset;
+Endruleset;
+
+-----------------------------------------------------------
+--Draining stores and loads from shared queues
+-----------------------------------------------------------
+
+ruleset b : blockT do
+  ruleset t : threadT do
+    ruleset a : addrT do
+      Alias Q : SQA[b][t][a] do  
+
+        Rule "Drain a store of a shared queue."
+        -- 
+	  !is_emptyq(Q)     & 
+	   lp_not_blocking(LP[b][t],a,False) &
+          Q.Arr[0].qType = st
+	                         ==>
+		     		    SM[b][t][a].Data     := Q.Arr[0].Data;
+				    SM[b][t][a].Borrowed := False;
+				    SM[b][t][a].Shared   := False;
+				    dequeue(Q);
+        EndRule;
+
+        Rule "Drain a load of a shared queue."
+        -- 
+	  !is_emptyq(Q)     & 
+          Q.Arr[0].qType = ld
+	                         ==>
+ 				    addtoLoadPool(LP[b][t],Q.Arr[0],a,False);
+				    dequeue(Q);
+        EndRule;
+      Endalias;
+    Endruleset;
+  Endruleset;
+Endruleset;
+
+-----------------------------------------------------------
+--Draining stores and loads from global queues
+-----------------------------------------------------------
+
+ruleset b : blockT do
+  ruleset t : threadT do
+    ruleset a : addrT do
+      Alias Q : GQA[b][t][a] do  
+
+        Rule "Drain a store of a global queue."
+        -- 
+	  !is_emptyq(Q)     &
+	  lp_not_blocking(LP[b][t],a,True) &
+          Q.Arr[0].qType = st
+	                       ==>
+		     		    GM[b][t][a].Data         := Q.Arr[0].Data;
+				    GM[b][t][a].Borrowed     := False;
+				    GM[b][t][a].Shared       := False;
+				    GM[b][t][a].GlobalShared := False;
+				    dequeue(Q);
+        EndRule;
+
+        Rule "Drain a load of a global queue."
+        -- 
+	  !is_emptyq(Q)     & 
+          Q.Arr[0].qType = ld
+	                       ==>
+ 				    addtoLoadPool(LP[b][t],Q.Arr[0],a,True);
+				    dequeue(Q);
+        EndRule;
+      Endalias;
+    Endruleset;
+  Endruleset;
+Endruleset;
+
+-----------------------------------------------------------
+--Non-deterministically execute a load from the load pool
+-----------------------------------------------------------
+
+ruleset b : blockT do
+  ruleset t : threadT do
+    ruleset i : pcT do
+      ruleset b1 : blockT do
+        ruleset t1 : threadT do
+          Alias a   : LP[b][t].Arr[i].Addr do
+          Alias reg : LP[b][t].Arr[i].Reg do
+
+          Rule "non-det execute a load from the load pool from our global memory"
+          i <= LP[b][t].Cnt &
+          LP[b][t].Arr[i].Global    
+                                 ==>  
+                                    REG[b][t][reg] := GM[b][t][a].Data;
+                                    removeFromLoadPool(LP[b][t], i );
+          EndRule;
+
+	  Rule "non-det execute a load from the load pool from our shared memory"
+          i <= LP[b][t].Cnt &
+          !LP[b][t].Arr[i].Global
+                                 ==>  
+                                    REG[b][t][reg] := SM[b][t][a].Data;
+                                    removeFromLoadPool(LP[b][t], i );
+          EndRule;
+
+          Rule "non-det execute a load from the load pool from others global memory out of block"
+          i <= LP[b][t].Cnt             &
+	  LP[b][t].Arr[i].Global        &
+	  GM[b][t][a].Borrowed = False  &
+          b != b1                       &
+          !GM[b1][t1][a].GlobalShared
+
+                              ==>  
+			          REG[b][t][reg] := GM[b1][t1][a].Data;
+   				  GM[b][t][a].Data := GM[b1][t1][a].Data;
+                                  GM[b][t][a].Shared := True;
+				  GM[b][t][a].Borrowed := True;
+				  GM[b][t][a].GlobalShared := True;
+                                  removeFromLoadPool(LP[b][t], i );
+          EndRule;
+
+          Rule "non-det execute a load from the load pool from others global memory inside block"
+          i <= LP[b][t].Cnt             &
+	  LP[b][t].Arr[i].Global        &
+	  GM[b][t][a].Borrowed = False  &
+          b = b1 & t != t1              &
+          !GM[b1][t1][a].Shared
+
+                              ==>  
+			          REG[b][t][reg] := GM[b1][t1][a].Data;
+   				  GM[b][t][a].Data := GM[b1][t1][a].Data;
+                                  GM[b][t][a].Shared := True;
+				  GM[b][t][a].Borrowed := True;
+				  GM[b][t][a].GlobalShared := True;
+                                  removeFromLoadPool(LP[b][t], i );
+          EndRule;
+
+          Rule "non-det execute a load from the load pool from others global memory inside block"
+          i <= LP[b][t].Cnt             &
+	  !LP[b][t].Arr[i].Global       &
+	  SM[b][t][a].Borrowed = False  &
+          b = b1 & t != t1              &
+          !SM[b1][t1][a].Shared
+
+                              ==>  
+			          REG[b][t][reg] := SM[b1][t1][a].Data;
+   				  SM[b][t][a].Data := SM[b1][t1][a].Data;
+                                  SM[b][t][a].Shared := True;
+				  SM[b][t][a].Borrowed := True;
+                                  removeFromLoadPool(LP[b][t], i );
+          EndRule;
+
+        EndAlias;
+        EndAlias;
+      Endruleset;
+      Endruleset;
+    Endruleset;
+  Endruleset;
+Endruleset;
+
+-----------------------------------------------------------
+--Invarients
+-----------------------------------------------------------
+
+--For Coherence
+--Invariant
+--   ! (done(0,0) & done(1,0) & done(2,0) & done(3,0) & 
+--     REG[2][0][0] = 1 & REG[2][0][1] = 0 &
+--     REG[3][0][0] = 2 & REG[3][0][1] = 0) 
+
+--For non-TSO
+Invariant
+   ! (done(0,0) & done(0,1) & done(0,2) & done(0,3) & 
+     REG[0][2][0] = 1 & REG[0][2][1] = 2 &
+     REG[0][3][0] = 2 & REG[0][3][1] = 1) 
