@@ -10,12 +10,12 @@ authors:
 superuser: true
 
 # Role/position
-role: Postdoctoral Researcher
+role: Assistant Professor
 
 # Organizations/Affiliations
 organizations:
-- name: Princeton University Computer Science
-  url: ""
+- name: University of California, Santa Cruz
+  url: "https://www.ucsc.edu/"
 
 # Short bio (displayed in user profile at end of posts)
 bio: My research interests include distributed robotics, mobile computing and programmable matter.
@@ -44,7 +44,7 @@ education:
 social:
 - icon: envelope
   icon_pack: fas
-  link: "mailto:ts20@cs.princeton.edu"  # For a direct email link, use "mailto:test@example.org".
+  link: "mailto:tyler.sorensen@ucsc.edu"  # For a direct email link, use "mailto:test@example.org".
 - icon: twitter
   icon_pack: fab
   link: https://twitter.com/Tyler_UCSC
@@ -70,27 +70,26 @@ email: ""
 #- Visitors
 ---
 
-<i> I am excited to announce that I will be starting Fall of 2020 at
-University of California, Santa Cruz (UCSC) as an Assistant Professor
-in Computer Science! </i>
+I am an Assistant Professor (starting Summer 2020) at University of
+California, Santa Cruz (UCSC) in The Department of Computer Science
+and Engineering. My research interests are in concurrency:
+programming, modeling, testing, and architecture. In particular, I am
+interested in exploring new programming models that enable development
+of correct and efficient applications on interesting (i.e. new or
+emerging) architectures.
 
-I am a Post Doc researcher at Princeton University working in <a
-href="http://www.princeton.edu/~mrm/"> Margaret Martonosi</a>'s
-group. My research interests are in concurrency: programming,
-modeling, testing, and architecture. In particular, I am interested
-in exploring new heterogeneous architectures and how programming models
-can enable development of secure and efficient applications.
+I see GPGPU programming as pragmatic avenue to explore different ideas
+in concurrency (and also programming GPUs is fun!).
+Given this, much of my work is framed using GPGPU. I am an invited
+individual contributer to the Khronos Group where we think about how
+to evolve official standards.
 
-I am working on the <a href="http://decades.cs.princeton.edu/">
-DECADES </a> project which is funded as part of the software defined
-hardware (SDH) project.
 
-My previous research focused on GPU programming, namely modeling
-the semantics of fine-grained thread interactions and using these
-insights to provide efficient and portable synchronisation idiom
-implementations.
+**I am currently looking for PhD students; please message me if the above description interests you!!**
 
-I received my PhD from the <a href="http://multicore.doc.ic.ac.uk/">
-Multicore Programming Group </a> at Imperial College London supervised
-by Alastair Donaldson. Previously, I worked with Ganesh Gopalakrishnan
-and Zvonimir Rakamaric at University of Utah.
+
+Previously, I was a Post Doc at Princeton working in [Margaret Martonosi](http://www.princeton.edu/~mrm/)'s
+group. I received my PhD from the 
+[Multicore Programming Group](http://multicore.doc.ic.ac.uk/) at Imperial College London supervised
+by Alastair Donaldson. Even earlier, I worked with Ganesh Gopalakrishnan
+and Zvonimir Rakamaric at University of Utah for my undergad and MS.

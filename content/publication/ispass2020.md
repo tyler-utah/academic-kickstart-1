@@ -18,7 +18,7 @@ authors = ["O. Matthews", "A. Manocha", "D. Giri", "M. Orenes-Vera", "E. Tureci"
 publication_types = ["1"]
 
 # Publication name and optional abbreviated version.
-publication_short = "<b> Best Paper Nomination </b> in *ISPASS*"
+publication_short = "**Best Paper Nomination** in *ISPASS*"
 
 # Abstract and optional shortened version.
 abstract = "As Moore's Law has slowed and Dennard Scaling has ended, architects are increasingly turning to heterogeneous parallelism and domain-specific hardware-software co-designs. These trends present new challenges for simulation-based performance assessments that are central to early-stage architectural exploration. Simulators must be lightweight to support rich heterogeneous combinations of general purpose cores and specialized processing units. They must also support agile exploration of hardware-software co-design, i.e. changes in the programming model, compiler, ISA, and specialized hardware. <br> To meet these challenges, we introduce MosaicSim, a lightweight, modular simulator for heterogeneous systems, offering accuracy and agility designed specifically for hardware-software co-design explorations. By integrating the LLVM toolchain, MosaicSim enables efficient modeling of instruction dependencies and flexible additions across the stack. Its modularity also allows the composition and integration of different hardware components. We first demonstrate that MosaicSim captures architectural bottlenecks in applications, and accurately models both scaling trends in a multicore setting and accelerator behavior. We then present two case-studies where MosaicSim enables straightforward design space explorations for emerging systems, i.e. data science application acceleration and heterogeneous parallel architectures."
