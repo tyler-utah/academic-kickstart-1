@@ -70,7 +70,7 @@ email: ""
 #- Visitors
 ---
 
-I am an Assistant Professor (starting Summer 2020) at University of
+I am an Assistant Professor at University of
 California, Santa Cruz (UCSC) in The Department of Computer Science
 and Engineering. My research interests are in concurrency:
 programming, modeling, testing, and architecture. In particular, I am
