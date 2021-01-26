@@ -18,5 +18,5 @@ weight = 15
 ### Fall 2020
 
 - [CSE 211: Compiler Design](https://users.soe.ucsc.edu/~tsorensen/classes/cse211fall20)
-- [CSE 280O-01: Language Systems and Data (LSD) Seminar]()
+- [CSE 280O-01: Language Systems and Data (LSD) Seminar](https://lsd-ucsc.github.io/lsd-seminar/2020fa/)
 
