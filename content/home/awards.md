@@ -13,6 +13,12 @@ subtitle = ""
 # Order that this section will appear in.
 weight = 100
 
+# older awards:
+# |Outstanding Senior Award (University of Utah)|2014|
+# |[Snow College 40 under 40](files/40under40.png) | 2014 |
+# |Finalist (top 5) CRA Undergraduate Research Competition | 2013 |
+
+
 +++
 
 | | |
@@ -23,7 +29,4 @@ weight = 100
 |PLDI'18 Best Paper Award | 2018 |
 |FSE'17 Best Paper Award | 2017 |
 |[ICL Art of Research Staff Pick](http://multicore.doc.ic.ac.uk/projects/artofresearch) | 2016 |
-|Outstanding Senior Award (University of Utah)|2014|
-|[Snow College 40 under 40](files/40under40.png) | 2014 |
-|Finalist (top 5) CRA Undergraduate Research Competition | 2013 |
 
