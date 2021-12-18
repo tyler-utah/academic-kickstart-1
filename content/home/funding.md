@@ -11,7 +11,7 @@ title = "Funding"
 subtitle = ""
 
 # Order that this section will appear in.
-weight = 15
+weight = 100
 
 +++
 

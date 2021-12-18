@@ -17,9 +17,9 @@ weight = 15
 
 I teach classes at UCSC on compilers and parallel programming. I also co-organize a seminar series with Professor Lindsey Kuper.
 
-- **CSE 280O-01:** _Language Systems and Data (LSD) Seminar_ - [current schedule](https://lsd-ucsc.github.io/lsd-seminar/2021fa/)
+- **CSE 280O-01:** _Language Systems and Data (LSD) Seminar_ - [Fall 2021 link](https://lsd-ucsc.github.io/lsd-seminar/2021fa/)
 
-- **CSE 211:** _Grad Compiler Design_ - [current class](https://sorensenucsc.github.io/CSE211-fa2021/index.html)
+- **CSE 211:** _Grad Compiler Design_ - [Fall 2021 link](https://sorensenucsc.github.io/CSE211-fa2021/index.html)
 
 - **CSE 113:** _Concurrent and Parallel Programming_ - [Spring 2021 link](https://sorensenucsc.github.io/CSE113-2021/index.html)
 
