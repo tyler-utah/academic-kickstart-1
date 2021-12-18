@@ -1,6 +1,6 @@
 ---
 title: DECADES Tiled Architecture
-summary: A new tiled architecture to acclerate a variety of applications
+summary: A new tiled heterogeneous architecture to explore hardware/software co-designs
 tags:
 
 # Optional external URL for project (replaces project detail page).
