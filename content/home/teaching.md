@@ -21,25 +21,15 @@ weight = 60
 
 +++
 
-_A sampling of my recent service_
-
-| Venue       | Role                  | Year |
-| ----------- | -----------           | ---- |
-| POPL        | SRC judge             | 2022 |
-| PLDI        | SRC co-chair          | 2022 |
-| ASPLOS      | PC                    | 2021 |
-| IA^3        | PC                    | 2021 |
-| PACT        | PC                    | 2021 |
-| PLDI        | SRC co-chair          | 2021 |
-| PLDI        | PC                    | 2020 |
-| ASPLOS      | ERC                   | 2020 |
-| IWOCL       | PC                    | 2019 |
-| ISCA        | ERC                   | 2019 |
-| ECOOP/ISTA  | PC for doctoral symp. | 2018 |
 
 
+A sampling of my recent service
 
-**Journal reviewer for:**
+* **SRC co-chair**: PLDI 2021, 2022
+* **Program Committee**: ASPLOS 2022, IA^3 2021, PACT 2021, CF 2021, FORTE 2020, PLDI 2020, IWOCL 2019
+* **External Program Committee**: MICRO 2021, MICRO 2020, ASPLOS 2020, ISCA 2019
+
+Journal reviewer for:
 
 - ACM TACO
 - Formal Methods in System Design
