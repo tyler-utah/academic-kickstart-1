@@ -43,6 +43,12 @@
   url = "#awards"
   weight = 70
 
+[[main]]
+  name = "Funding"
+  url = "#funding"
+  weight = 120
+
+
 
 
 

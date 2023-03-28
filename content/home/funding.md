@@ -17,6 +17,8 @@ weight = 100
 
 I am grateful to the following organizations for funding support:
 
+- **NSF**: _CAREER award support for exploring heterogeneous memory models_
+
 - **Google**: _support for memory consistency testing work_
 
 - **DARPA**: _support for irregular application acceleration_ (subcontracted from the [DECADES](http://decades.cs.princeton.edu/) project)

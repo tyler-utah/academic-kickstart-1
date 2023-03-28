@@ -45,7 +45,7 @@ tags = []
 url_pdf = "files/oopsla2021b.pdf"
 url_preprint = ""
 url_code = "https://github.com/tyler-utah/AlloyForwardProgress/tree/master/artifact"
-links = [{name="Test Explorer",url="https://www.cs.princeton.edu/~ls24/testExplorer.html?threads=2&instructions=2&test=0"}]
+links = [{name="Test Explorer",url="https://gpuharbor.ucsc.edu/gpu-forward-progress/testExplorer.html"}]
 url_dataset = ""
 url_project = ""
 url_slides = ""
