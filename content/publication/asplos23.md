@@ -1,6 +1,6 @@
 +++
 title = "MC Mutants: Evaluating and Improving Testing for Memory Consistency Specifications"
-date = 2023-09-01T00:00:00
+date = 2023-03-01T00:00:00
 draft = false
 
 # Authors. Comma separated list, e.g. `["Bob Smith", "David Jones"]`.
@@ -18,7 +18,7 @@ authors = ["R. Levine", "T. Guo", "M. Cho", "A. Baker", "R. Levien", "D. Neto", 
 publication_types = ["1"]
 
 # Publication name and optional abbreviated version.
-publication_short = "In *ASPLOS*"
+publication_short = " **Distinguished Paper Award** in *ASPLOS*"
 
 # Abstract and optional shortened version.
 
@@ -45,7 +45,6 @@ tags = []
 
 # Links (optional).
 url_pdf = "https://reeselevine.github.io/assets/pdf/mc_mutants.pdf"
-links = [{name="News",url="https://news.ucsc.edu/2023/03/sorensen-bugs.html"}]
 url_preprint = ""
 url_code = ""
 url_dataset = ""
