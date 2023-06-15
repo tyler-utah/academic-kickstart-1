@@ -18,7 +18,7 @@ authors = ["R. Levine", "T. Guo", "M. Cho", "A. Baker", "R. Levien", "D. Neto", 
 publication_types = ["1"]
 
 # Publication name and optional abbreviated version.
-publication_short = " **Distinguished Paper Award** in *ASPLOS*"
+publication_short = " **Distinguished Paper Award** and **Distinguished Artifact Award** in *ASPLOS*"
 
 # Abstract and optional shortened version.
 
