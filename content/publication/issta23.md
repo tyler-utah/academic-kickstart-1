@@ -1,9 +1,10 @@
 +++
 title = "GPUHarbor: Testing GPU Memory Consistency at Large (Experience Paper)"
-date = 2023-07-01T00:00:00
+date = 2023-06-01T00:00:00
 draft = false
 
 # Authors. Comma separated list, e.g. `["Bob Smith", "David Jones"]`.
+# authors = ["R. Levine", "T. Guo", "M. Cho", "A. Baker", "R. Levien", "D. Neto", "A. Quinn", "T. Sorensen"]
 authors = ["R. Levine", "M. Cho", "D. McKee", "A. Quinn", "T. Sorensen"]
 
 # Publication type.
@@ -18,11 +19,11 @@ authors = ["R. Levine", "M. Cho", "D. McKee", "A. Quinn", "T. Sorensen"]
 publication_types = ["1"]
 
 # Publication name and optional abbreviated version.
-publication_short = " **Distinguished Paper Award** and **Distinguished Artifact Award** in *ASPLOS*"
+publication_short = "in *ISSTA*"
 
 # Abstract and optional shortened version.
 
-abstract = ""
+abstract = "Memory consistency specifications (MCSs) are a difficult, yet critical, part of a concurrent programming framework. Existing MCS testing tools are not immediately accessible, and thus, they have only been applied to a limited number of platforms. However, in the post-Dennard scaling landscape, there has been an explosion of new architectures and frameworks, especially for GPUs. Studying the shared memory behaviors of different devices (across vendors and architecture generations) is important to ensure conformance and to understand the extent that devices show different behaviors.  In this paper, we present GPUHarbor, a widescale GPU MCS testing tool. GPUHarbor has two interfaces: a web interface and an Android app. Using GPUHarbor, we deployed a testing campaign that checks conformance and characterizes weak behaviors. We advertised GPUHarbor on forums and social media, allowing us to collect testing data from 106 devices, spanning seven vendors.  In terms of devices tested, this constitutes the largest study on weak memory behaviors by at least 10×, and our conformance tests identified two new bugs on embedded Arm and NVIDIA devices. Analyzing our characterization data yields many insights, including quantifying and comparing weak behavior occurrence rates (e.g., AMD GPUs show 25.3× more weak behaviors on average than Intel). We conclude with a discussion of the impact our results have on software development for these performance-critical devices."
 
 abstract_short = ""
 

@@ -21,10 +21,10 @@ weight = 12
 - [Yanwen Xu](https://people.ucsc.edu/~yxu83) - Started Spring 2021
 - [Rithik Sharma](https://sharmarithik.github.io/rithiksharma/) - Started Fall 2022
 - [Jessica Dagostini](https://jessicadagostini.herokuapp.com/) - Started Fall 2022 (co-advised with Scott Beamer)
+- [Devon McKee](https://www.linkedin.com/in/devonmckee/) - Started Spring 2023
 
 ### MS Students
 
-- [Devon McKee](https://www.linkedin.com/in/devonmckee/)
 - [Abhijeet Nikam](https://www.linkedin.com/in/abhijeet-nikam-29024b11a/)
 - [Zheyuan Chen](https://www.linkedin.com/in/zheyuan-chen-7b3b78180/)
 
@@ -32,7 +32,6 @@ weight = 12
 ### Undergrad Students
 
 - [Sanya Srivastava](http://linkedin.com/in/sanyasrivas), [Kyle Little](https://www.linkedin.com/in/kyle-little-26580a247/)
-- Kyle Little
 
 ### Alumni
 
