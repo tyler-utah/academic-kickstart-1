@@ -25,12 +25,7 @@ weight = 60
 
 A sampling of my recent service
 
+* **Program Committee Vice Chair**: ASPLOS 2024
+* **Program Committee**: PLDI 2024, ASPLOS 2022, IA^3 2021, PACT 2021, CF 2021, FORTE 2020, PLDI 2020, IWOCL 2019
 * **SRC co-chair**: PLDI 2021, 2022
-* **Program Committee**: ASPLOS 2024, ASPLOS 2022, IA^3 2021, PACT 2021, CF 2021, FORTE 2020, PLDI 2020, IWOCL 2019
 * **External Program Committee**: MICRO 2021, MICRO 2020, ASPLOS 2020, ISCA 2019
-
-Journal reviewer for:
-
-- ACM TACO
-- Formal Methods in System Design
-
